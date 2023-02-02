@@ -1,13 +1,17 @@
-use rocksdb::DB;
+use rocksdb::{DB, SliceTransform};
 use std::io;
 use rocksdb::IteratorMode::Start;
 
 fn main() {
     let path = "./db";
-    let db = DB::open_default(path).unwrap();
+    let mut options = rocksdb::Options::default();
+    options.optimize_for_point_lookup(16);
+    options.create_if_missing(true);
+    options.set_prefix_extractor(SliceTransform::create_fixed_prefix(1));
+    let db = DB::open(&options, path).unwrap();
 
     loop {
-        println!("Enter command (put, get, getall, quit):");
+        println!("Enter command (put, get, getall, search, quit):");
 
         let mut input = String::new();
         io::stdin().read_line(&mut input).unwrap();
@@ -43,9 +47,21 @@ fn main() {
                     Err(e) => println!("Database error: {:?}", e)
                 }
             }
+            "search" => {
+                let prefix = words.next().unwrap_or("");
+                let iter = db.prefix_iterator(prefix.as_bytes());
+                println!("Searching by prefix '{}':", prefix);
+                for elem in iter {
+                    if elem.is_ok() {
+                        let (key, value) = elem.unwrap();
+                        println!("({}, {})",
+                                 std::str::from_utf8(key.as_ref()).unwrap(),
+                                 std::str::from_utf8(value.as_ref()).unwrap());
+                    }
+                }
+            }
             "quit" => break,
             _ => println!("Invalid command."),
         }
     }
 }
-
