@@ -49,6 +49,11 @@ fn main() {
             }
             "search" => {
                 let prefix = words.next().unwrap_or("");
+                // prefix_iterator searches for the entries with the same prefix as a requested key
+                // options.set_prefix_extractor(SliceTransform::create_fixed_prefix(1)) in the beginning of the file
+                // sets the prefix to 1. Only records with the same first byte are returned.
+                // If prefix extractor is not set, this iterator will return the first record with
+                // the longest same prefix as the requested key and all subsequent records.
                 let iter = db.prefix_iterator(prefix.as_bytes());
                 println!("Searching by prefix '{}':", prefix);
                 for elem in iter {
